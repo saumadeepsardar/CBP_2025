@@ -47,7 +47,7 @@
 #define LOOPTAG 10             // Tag width for loop predictor
 
 // RL Policy Network Parameters
-#define INPUT_SIZE 8      // Increased to include Loop Predictor features
+#define INPUT_SIZE 12      // Increased to include Loop Predictor features
 #define HIDDEN_SIZE1 32      // Larger hidden layer for better capacity
 #define HIDDEN_SIZE2 16
 #define OUTPUT_SIZE 1        // Binary output (flip or no-flip)
