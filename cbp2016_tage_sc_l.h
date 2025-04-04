@@ -52,10 +52,10 @@
 #define HIDDEN_SIZE2 16
 #define OUTPUT_SIZE 1           // Binary output (flip or no-flip)
 #define WEIGHT_PRECISION 8      // 8-bit weights for storage efficiency
-#define LEARNING_RATE 0.01f     // Initial learning rate (slightly reduced)
-#define WEIGHT_DECAY 0.0001f    // L2 regularization factor
+#define LEARNING_RATE 0.0000001//0.00000001f     // Initial learning rate (slightly reduced)
+#define WEIGHT_DECAY 0.001f    // L2 regularization factor
 #define REPLAY_BUFFER_SIZE 6000 // Buffer size
-#define BATCH_SIZE 64           // Batch size for updates
+#define BATCH_SIZE 16           // Batch size for updates
 
 // Global Arrays
 bool NOSKIP[NHIST + 1];   // Controls TAGE table associativity
@@ -507,7 +507,7 @@ public:
             float sum = 0.0f;
             for (int i = 0; i < INPUT_SIZE; i++)
                 sum += state.features[i] * w1[i][j];
-            hidden1[j] = (sum > 0) ? sum : 0;
+            hidden1[j] = (sum > 0) ? sum : 0.01*sum;
         }
 
         // Hidden1 -> Hidden2 (ReLU)
@@ -516,16 +516,24 @@ public:
             float sum = 0.0f;
             for (int k = 0; k < HIDDEN_SIZE1; k++)
                 sum += hidden1[k] * w2[k][j];
-            hidden2[j] = (sum > 0) ? sum : 0;
+            hidden2[j] = (sum > 0) ? sum : 0.01*sum;
         }
 
         // Hidden2 -> Output (sigmoid)
         float logit = 0.0f;
         for (int j = 0; j < HIDDEN_SIZE2; j++)
             logit += hidden2[j] * w3[j];
+
+        // Clip logit to prevent overflow
+        
+        logit = std::max(-40.0f, std::min(40.0f, logit));
+        // Use numerically stable sigmoid calculation
         float prob = 1.0f / (1.0f + expf(-logit));
+
+        // Use better random number generation
         bool flip = (float)(rand() % 1000) / 1000.0f < prob;
-        //std::cout<<prob<<std::endl;
+        std::cout<<prob<<","<<logit<<","<<flip<<std::endl;
+        
         return {flip, prob};
     }
 
@@ -655,7 +663,7 @@ public:
 
         /// Perform batch update if enough experiences
          if (replay_buffer.size() >= BATCH_SIZE) {
-             update_rl_batch();
+            update_rl_batch();
          }
 
         update_rl(PC, resolveDir, pred_taken, pred_time_state);
@@ -796,29 +804,31 @@ public:
 
         // Learning rate decay every 500 updates
         static int update_count = 0;
-        if (++update_count % 500 == 0)
+        if (++update_count % 1000 == 0)
         {
-            current_lr *= 0.95f; // 5% decay (was 0.99f every 1000 updates)
+            current_lr *= 0.99f; // 5% decay (was 0.99f every 1000 updates)
         }
     }
 
     // RL Update
     void update_rl(UINT64 PC, bool resolveDir, bool pred_taken, const RLState &state)
     {
-         float reward = (pred_taken == resolveDir) ? 1.0f : -1.0f;  // +1 for correct, -1 for incorrect
-        // float reward = 0.0f; // +1 for correct, -1 for incorrect
-        // if (pred_action.prob > 0.75f)
-        // {
-        //     reward = (pred_taken == resolveDir) ? 0.5f : -0.5f; // Double reward for high confidence
-        // }
-        // else if (pred_action.prob > 0.5f)
-        // {
-        //     reward = (pred_taken == resolveDir) ? 0.75f : -0.75f; // Double penalty for low confidence
-        // }
-        // else
-        // {
-        //     reward = (pred_taken == resolveDir) ? 1.0f : -1.0f; // Neutral reward for low confidence
-        // }
+        //  float reward = (pred_taken == resolveDir) ? 1.0f : -1.0f;  // +1 for correct, -1 for incorrect
+        float reward = 0.0f; // +1 for correct, -1 for incorrect
+        if (pred_action.prob > 0.4f)
+        {
+            reward = (pred_taken == resolveDir) ? 1.5f : -1.0f; // Double reward for high confidence
+        }
+        else if (pred_action.prob > 0.1f)
+        {
+            reward = (pred_taken == resolveDir) ? 0.75f : -0.75f; // Double penalty for low confidence
+        }
+        else
+        {
+            reward = (pred_taken == resolveDir) ? -0.5f : 0.0f; // Neutral reward for low confidence
+        }
+
+        
 
         float grad_log_pi = pred_action.flip ? (1.0f - pred_action.prob) : -pred_action.prob;
 
