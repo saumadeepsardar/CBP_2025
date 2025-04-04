@@ -52,10 +52,10 @@
 #define HIDDEN_SIZE2 16
 #define OUTPUT_SIZE 1           // Binary output (flip or no-flip)
 #define WEIGHT_PRECISION 8      // 8-bit weights for storage efficiency
-#define LEARNING_RATE 0.0000001//0.00000001f     // Initial learning rate (slightly reduced)
+#define LEARNING_RATE 0.000001  // Initial learning rate (slightly reduced)
 #define WEIGHT_DECAY 0.001f    // L2 regularization factor
-#define REPLAY_BUFFER_SIZE 6000 // Buffer size
-#define BATCH_SIZE 16           // Batch size for updates
+#define REPLAY_BUFFER_SIZE 3000 // Buffer size
+#define BATCH_SIZE 64           // Batch size for updates
 
 // Global Arrays
 bool NOSKIP[NHIST + 1];   // Controls TAGE table associativity
@@ -532,7 +532,7 @@ public:
 
         // Use better random number generation
         bool flip = (float)(rand() % 1000) / 1000.0f < prob;
-        std::cout<<prob<<","<<logit<<","<<flip<<std::endl;
+        //std::cout<<prob<<","<<logit<<","<<flip<<std::endl;
         
         return {flip, prob};
     }
@@ -638,22 +638,6 @@ public:
         {
             reward = HighConf ? -1.0f : -0.5f; // Penalty based on confidence
         }
-    
-   /*
-        float reward = 0.0f; // +1 for correct, -1 for incorrect
-        if (pred_action.prob > 0.75f)
-        {
-            reward = (pred_taken == resolveDir) ? 0.5f : -0.5f; // Double reward for high confidence
-        }
-        else if (pred_action.prob > 0.5f)
-        {
-            reward = (pred_taken == resolveDir) ? 0.75f : -0.75f; // Double penalty for low confidence
-        }
-        else
-        {
-            reward = (pred_taken == resolveDir) ? 1.0f : -1.0f; // Neutral reward for low confidence
-        }
- */
 
         // Store experience
         replay_buffer.push_back(Experience(pred_time_state, pred_action, reward));
@@ -817,7 +801,7 @@ public:
         float reward = 0.0f; // +1 for correct, -1 for incorrect
         if (pred_action.prob > 0.4f)
         {
-            reward = (pred_taken == resolveDir) ? 1.5f : -1.0f; // Double reward for high confidence
+            reward = (pred_taken == resolveDir) ? 5.0f: -5.0f; // Double reward for high confidence
         }
         else if (pred_action.prob > 0.1f)
         {
@@ -825,7 +809,7 @@ public:
         }
         else
         {
-            reward = (pred_taken == resolveDir) ? -0.5f : 0.0f; // Neutral reward for low confidence
+            reward = (pred_taken == resolveDir) ? 0.5f : -2.5f; // Neutral reward for low confidence
         }
 
         
